@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CityClean — Smart Garbage Collection &amp; Complaint Tracking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script>
+  // Palette-matched SVG illustrations used only if a hotlinked photo fails to load
+  // (blocked by network/ad-blocker/offline) — guarantees every image slot still shows something.
+  const FALLBACK = {
+    hero: 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 150"><rect width="400" height="150" fill="#dff2e6"/><rect x="0" y="100" width="400" height="50" fill="#40916c"/><rect x="30" y="45" width="50" height="55" fill="#22543d"/><rect x="100" y="60" width="40" height="40" fill="#40916c"/><rect x="160" y="35" width="55" height="65" fill="#22543d"/><rect x="240" y="55" width="45" height="45" fill="#40916c"/><rect x="300" y="40" width="60" height="60" fill="#22543d"/><circle cx="350" cy="32" r="14" fill="#d8f3dc"/></svg>'),
+    upload: 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 100"><rect width="300" height="100" fill="#d8f3dc"/><rect x="40" y="40" width="35" height="45" rx="4" fill="#22543d"/><rect x="90" y="30" width="30" height="55" rx="4" fill="#40916c"/><rect x="180" y="35" width="35" height="50" rx="4" fill="#22543d"/><circle cx="230" cy="55" r="18" fill="#40916c"/></svg>'),
+    dash: 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 60"><rect width="400" height="60" fill="#22543d"/><rect x="0" y="45" width="400" height="15" fill="#0a1a0f"/><rect x="150" y="15" width="70" height="30" rx="3" fill="#40916c"/><rect x="220" y="25" width="35" height="20" fill="#40916c"/><circle cx="165" cy="47" r="7" fill="#0a1a0f"/><circle cx="235" cy="47" r="7" fill="#0a1a0f"/></svg>'),
+    recycle: 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200"><rect width="300" height="200" fill="#d8f3dc"/><circle cx="150" cy="100" r="58" fill="#ffffff"/><path d="M150 58c25 0 45 20 45 45 0 5 0 10-1 14-25-2-44-20-44-45 0-5 0-9 0-14z" fill="#40916c"/><path d="M150 58c0 25-16 45-41 55" stroke="#22543d" stroke-width="5" fill="none" stroke-linecap="round"/></svg>'),
+    nature: 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 26"><rect width="400" height="26" fill="#22543d"/><g fill="#40916c"><polygon points="20,26 30,6 40,26"/><polygon points="60,26 72,2 84,26"/><polygon points="110,26 120,10 130,26"/><polygon points="180,26 192,4 204,26"/><polygon points="240,26 250,10 260,26"/><polygon points="300,26 312,2 324,26"/><polygon points="350,26 360,8 370,26"/></g></svg>'),
+  };
+</script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c8 0 14-6 14-14-8 0-14 6-14 14Z"/><path d="M5 19c0-5 3-8 7-9.5"/></svg></div>
+      <div>
+        <div class="brand">CityClean</div>
+        <div class="brand-sub">Municipal Waste Platform</div>
+      </div>
+    </div>
+    <nav class="side-nav">
+      <button class="nav-item active" data-tab="map" onclick="showTab('map')">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3 3 5v16l6-2 6 2 6-2V3l-6 2-6-2Z"/><path d="M9 3v16M15 5v16"/></svg>
+        Live Map
+      </button>
+      <button class="nav-item" data-tab="report" onclick="showTab('report')">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.3"/></svg>
+        Report Issue
+      </button>
+      <button class="nav-item" data-tab="reports" onclick="showTab('reports')">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7Z"/></svg>
+        My Reports
+      </button>
+      <button class="nav-item" data-tab="dashboard" onclick="showTab('dashboard')">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item" data-tab="notif" onclick="showTab('notif')">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 13 6 9Z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
+        Notifications
+      </button>
+    </nav>
+    <div class="sidebar-accent">
+      <img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1200&h=80&fit=crop&auto=format" alt="" onerror="this.onerror=null;this.src=FALLBACK.nature;">
+    </div>
+    <div class="sidebar-foot">CityClean · v1.0</div>
+  </aside>
+
+  <main class="content">
+   <div class="content-inner">
+
+    <!-- MAP -->
+    <section class="panel active" id="panel-map">
+      <div class="banner banner-hero">
+        <img src="https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=1200&h=300&fit=crop&auto=format" alt="Aerial view of a clean city neighbourhood street" onerror="this.onerror=null;this.src=FALLBACK.hero;">
+        <div class="overlay"></div>
+        <div class="banner-inner">
+          <h1>Live vehicle tracking</h1>
+          <p>Wadala, Mumbai — see where collection vehicles are right now, and when they'll reach your street.</p>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="map" id="leafletMap"></div>
+        <div class="route-list" id="routeList"></div>
+      </div>
+    </section>
+
+    <!-- REPORT -->
+    <section class="panel" id="panel-report">
+      <h2 class="section-title">Report uncollected garbage</h2>
+      <p class="section-sub">Fill in the details below — your report gets a unique ID instantly.</p>
+      <form class="form-grid" id="complaintForm">
+        <div class="field">
+          <label>Your name</label>
+          <input type="text" id="f-name" placeholder="e.g. Rohan Sharma" required>
+        </div>
+        <div class="field">
+          <label>Locality</label>
+          <select id="f-area" required>
+            <option value="">Select area</option>
+            <option>Wadala Truck Terminal</option>
+            <option>Kidwai Nagar</option>
+            <option>Antop Hill</option>
+            <option>Bhakti Park</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label>Photo of the garbage</label>
+          <div class="upload-zone" onclick="document.getElementById('f-photo').click()">
+            <img src="https://images.unsplash.com/photo-1604187351574-c75ca79f5807?w=600&h=200&fit=crop&auto=format" alt="" onerror="this.onerror=null;this.src=FALLBACK.upload;">
+            <div class="uz-label">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17a4 4 0 0 1-1-7.87A5.5 5.5 0 0 1 16.9 8H17a3.5 3.5 0 0 1 0 7"/><path d="M12 11v7M9.5 13.5 12 11l2.5 2.5"/></svg>
+              Click to upload a photo
+              <small>JPG or PNG, up to 5MB</small>
+            </div>
+          </div>
+          <input type="file" id="f-photo" accept="image/*" style="display:none;">
+        </div>
+        <div class="field full">
+          <label>Location</label>
+          <div style="display:flex; gap:10px;">
+            <input type="text" id="f-lat" placeholder="Latitude" readonly style="flex:1;">
+            <input type="text" id="f-lng" placeholder="Longitude" readonly style="flex:1;">
+            <button type="button" class="btn btn-ghost" onclick="autoLocate()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.3"/></svg>
+              Detect my location
+            </button>
+          </div>
+          <span style="font-size:11.5px; color:var(--muted);" id="locHint">Or leave blank and just pick your area above.</span>
+        </div>
+        <div class="field full">
+          <label>Description</label>
+          <textarea id="f-desc" placeholder="What's the issue?" required></textarea>
+        </div>
+        <div class="field full">
+          <label>Severity</label>
+          <div class="sev-pills">
+            <div class="pill low" onclick="pickSeverity(this,'Low')">Low</div>
+            <div class="pill medium on" onclick="pickSeverity(this,'Medium')">Medium</div>
+            <div class="pill high" onclick="pickSeverity(this,'High')">High</div>
+          </div>
+        </div>
+        <div class="field full">
+          <button type="submit" class="btn" style="width:fit-content;">Submit report</button>
+        </div>
+      </form>
+      <div class="toast" id="toast"></div>
+    </section>
+
+    <!-- MY REPORTS -->
+    <section class="panel" id="panel-reports">
+      <h2 class="section-title">My reports</h2>
+      <p class="section-sub">Track the status of everything you've reported.</p>
+      <div class="segmented" id="filterRow"></div>
+      <div id="reportsList"></div>
+    </section>
+
+    <!-- DASHBOARD -->
+    <section class="panel" id="panel-dashboard">
+      <div class="banner banner-dash">
+        <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1200&h=180&fit=crop&auto=format" alt="Garbage collection truck on a city road" onerror="this.onerror=null;this.src=FALLBACK.dash;">
+        <div class="overlay"></div>
+        <div class="banner-inner">
+          <h1>Authority dashboard</h1>
+          <p>Every report, sorted by area and severity, so nothing sits untouched.</p>
+        </div>
+      </div>
+      <div class="stat-strip" id="statGrid"></div>
+      <h2 class="section-title" style="font-size:14.5px;">Complaints by area</h2>
+      <div class="bars" id="barChart"></div>
+      <h2 class="section-title" style="font-size:14.5px;">All complaints</h2>
+      <table>
+        <thead><tr><th>ID</th><th>Citizen</th><th>Area</th><th>Severity</th><th>Status</th><th></th></tr></thead>
+        <tbody id="dashBody"></tbody>
+      </table>
+    </section>
+
+    <!-- NOTIFICATIONS -->
+    <section class="panel" id="panel-notif">
+      <h2 class="section-title">Notifications</h2>
+      <p class="section-sub">Alerts for nearby vehicles and complaint updates.</p>
+      <div class="notif-list" id="notifList"></div>
+    </section>
+
+   </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+  const ICON = {
+    truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h10v8H3z"/><path d="M13 11h4l3 3v1h-7z"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.3l2.4 2.4 4.6-5"/></svg>',
+    camera: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="13" r="3.3"/></svg>',
+  };
+
+  // ---------- live backend integration ----------
+  const API = ''; // same-origin — server.js serves this page and the API together
+  let vehiclesCache = [];
+  let selectedSeverity = 'Medium';
+  let activeFilter = 'all';
+  let notifications = [];
+  const EMPTY_IMG = 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=300&h=200&fit=crop&auto=format';
+
+  async function api(path, opts){
+    const res = await fetch(API + path, opts);
+    let data = null;
+    try { data = await res.json(); } catch(e) { /* no body */ }
+    if(!res.ok) throw new Error((data && data.message) || `Request failed (${res.status})`);
+    return data;
+  }
+
+  function timeAgo(iso){
+    if(!iso) return '';
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if(mins < 1) return 'Just now';
+    if(mins < 60) return `${mins} min ago`;
+    const hrs = Math.round(mins/60);
+    if(hrs < 24) return `${hrs} hr ago`;
+    return `${Math.round(hrs/24)} day(s) ago`;
+  }
+
+  function pushNotification(ic, title){
+    notifications.unshift({ic, title, time:'Just now'});
+    renderNotifications();
+  }
+
+  // ---------- map ----------
+  async function initMap(){
+    const el = document.getElementById('leafletMap');
+    try {
+      vehiclesCache = await api('/api/vehicles');
+    } catch(e) {
+      el.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12.5px;padding:24px;text-align:center;">Couldn't load vehicles from the backend — ${e.message}</div>`;
+      return;
+    }
+    renderRoutes();
+    if(typeof L === 'undefined'){
+      el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);font-size:12.5px;padding:24px;text-align:center;">Map tiles need an internet connection to load.</div>';
+      return;
+    }
+    const map = L.map(el, {scrollWheelZoom:false}).setView([19.0176, 72.8562], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(map);
+    vehiclesCache.forEach(v=>{
+      if(v.latitude == null || v.longitude == null) return;
+      const color = etaClass(v.eta_minutes) === 'soon' ? '#40916c' : etaClass(v.eta_minutes) === 'mid' ? '#f59e0b' : '#0ea5e9';
+      const icon = L.divIcon({
+        className:'',
+        html:`<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 1px 4px rgba(10,26,15,.45);"></div>`,
+        iconSize:[16,16], iconAnchor:[8,8]
+      });
+      L.marker([Number(v.latitude), Number(v.longitude)], {icon}).addTo(map)
+        .bindTooltip(`<b>${v.vehicle_number}</b><br>${v.area} · ${v.eta_minutes} min`, {direction:'top', offset:[0,-8]});
+    });
+  }
+
+  function etaClass(mins){
+    if(mins == null) return 'far';
+    if(mins <= 10) return 'soon';
+    if(mins <= 25) return 'mid';
+    return 'far';
+  }
+
+  function renderRoutes(){
+    document.getElementById('routeList').innerHTML = vehiclesCache.map(v=>`
+      <div class="route-item">
+        <div><div class="rname">${v.vehicle_number}</div><div class="rarea">${v.area}</div></div>
+        <div class="eta ${etaClass(v.eta_minutes)}">${v.eta_minutes} min</div>
+      </div>`).join('');
+  }
+
+  function showTab(name){
+    document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
+    document.querySelectorAll('.panel').forEach(p=>{
+      const isTarget = p.id === 'panel-'+name;
+      p.classList.remove('active');
+      if(isTarget){ void p.offsetWidth; p.classList.add('active'); }
+    });
+    if(name === 'reports') renderReports();
+    if(name === 'dashboard') renderDashboard();
+  }
+
+  function pickSeverity(el, val){
+    document.querySelectorAll('.sev-pills .pill').forEach(p=>p.classList.remove('on'));
+    el.classList.add('on');
+    selectedSeverity = val;
+  }
+
+  function autoLocate(){
+    const hint = document.getElementById('locHint');
+    if(!navigator.geolocation){ hint.textContent = 'Geolocation not supported — pick your area above.'; return; }
+    hint.textContent = 'Detecting location…';
+    navigator.geolocation.getCurrentPosition(
+      pos=>{
+        document.getElementById('f-lat').value = pos.coords.latitude.toFixed(5);
+        document.getElementById('f-lng').value = pos.coords.longitude.toFixed(5);
+        hint.textContent = 'Location captured ✔';
+      },
+      ()=>{ hint.textContent = 'Could not access location — pick your area above instead.'; }
+    );
+  }
+
+  function sevDot(sev){ return `<span class="sev-dot ${sev}"></span>${sev.charAt(0).toUpperCase()+sev.slice(1)}`; }
+
+  const STATUS_META = {
+    pending:     {cls:'pending',  label:'Pending'},
+    assigned:    {cls:'progress', label:'Assigned'},
+    in_progress: {cls:'progress', label:'In progress'},
+    resolved:    {cls:'resolved', label:'Resolved'},
+    rejected:    {cls:'escalated',label:'Rejected'},
+  };
+  function statusBadge(s){
+    const m = STATUS_META[s] || {cls:'pending', label:s};
+    return `<span class="badge ${m.cls}">${m.label}</span>`;
+  }
+
+  const FILTERS = ['all','pending','assigned','in_progress','resolved','rejected'];
+
+  async function renderReports(){
+    document.getElementById('filterRow').innerHTML = FILTERS.map(f=>{
+      const label = f==='all' ? 'All' : STATUS_META[f].label;
+      return `<button class="${activeFilter===f?'active':''}" onclick="setFilter('${f}')">${label}</button>`;
+    }).join('');
+
+    const box = document.getElementById('reportsList');
+    let list;
+    try {
+      list = await api('/api/complaints' + (activeFilter==='all' ? '' : `?status=${activeFilter}`));
+    } catch(e) {
+      box.innerHTML = `<div class="empty-state"><p>Couldn't load reports — ${e.message}</p></div>`;
+      return;
+    }
+    if(list.length===0){
+      box.innerHTML = `<div class="empty-state">
+        <img src="${EMPTY_IMG}" alt="Recycling and environment themed illustration" onerror="this.onerror=null;this.src=FALLBACK.recycle;">
+        <p>No complaints in this category.</p>
+      </div>`;
+    } else {
+      box.innerHTML = list.map(c=>`
+        <div class="report-card">
+          <div>
+            <div class="rc-id">${c.complaint_code}</div>
+            <div class="rc-area">${c.area} · ${sevDot(c.severity)}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:14px;">
+            ${statusBadge(c.status)}
+            <span style="font-size:12px; color:var(--muted);">${new Date(c.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short'})}</span>
+          </div>
+        </div>`).join('');
+    }
+  }
+  function setFilter(f){ activeFilter = f; renderReports(); }
+
+  async function renderDashboard(){
+    let summary, list;
+    try {
+      [summary, list] = await Promise.all([api('/api/dashboard/summary'), api('/api/complaints')]);
+    } catch(e) {
+      document.getElementById('statGrid').innerHTML = `<div class="stat">Couldn't load dashboard — ${e.message}</div>`;
+      return;
+    }
+    const topArea = summary.complaints_by_area[0];
+    document.getElementById('statGrid').innerHTML = `
+      <div class="stat"><div class="num">${summary.total_complaints}</div><div class="lbl">Total complaints</div></div>
+      <div class="stat"><div class="num">${summary.resolved}</div><div class="lbl">Resolved</div></div>
+      <div class="stat"><div class="num">${summary.pending + summary.in_progress}</div><div class="lbl">Open / in progress</div></div>
+      <div class="stat"><div class="num">${topArea ? topArea.area : '—'}</div><div class="lbl">Most-affected area</div></div>`;
+
+    const max = Math.max(...summary.complaints_by_area.map(a=>a.count), 1);
+    document.getElementById('barChart').innerHTML = summary.complaints_by_area.map(a=>`
+      <div class="bar-row">
+        <div>${a.area}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(a.count/max*100)}%"></div></div>
+        <div>${a.count}</div>
+      </div>`).join('');
+
+    document.getElementById('dashBody').innerHTML = list.map(c=>`
+      <tr><td class="rc-id">${c.complaint_code}</td><td>${c.citizen_name}</td><td>${c.area}</td><td>${sevDot(c.severity)}</td>
+      <td>${statusBadge(c.status)}</td>
+      <td>${c.status!=='resolved' ? `<button class="mini-btn" onclick="resolveComplaint(${c.id}, '${c.complaint_code}')">Mark resolved</button>` : '—'}</td></tr>`).join('');
+  }
+
+  function renderNotifications(){
+    document.getElementById('notifList').innerHTML = notifications.length
+      ? notifications.map(n=>`
+        <div class="notif">
+          <div class="nic">${ICON[n.ic]}</div>
+          <div><div class="ntitle">${n.title}</div><div class="ntime">${n.time}</div></div>
+        </div>`).join('')
+      : `<div class="empty-state"><p>No notifications yet.</p></div>`;
+  }
+
+  async function resolveComplaint(id, code){
+    try {
+      await api(`/api/complaints/${id}`, {
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({status:'resolved'})
+      });
+      pushNotification('check', `Complaint ${code} has been resolved`);
+      renderDashboard(); renderReports();
+    } catch(e) {
+      alert('Could not mark resolved: ' + e.message);
+    }
+  }
+
+  document.getElementById('complaintForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    const submitBtn = this.querySelector('button[type=submit]');
+    submitBtn.disabled = true;
+
+    const fd = new FormData();
+    fd.append('citizen_name', document.getElementById('f-name').value || 'Anonymous');
+    fd.append('area', document.getElementById('f-area').value);
+    fd.append('description', document.getElementById('f-desc').value);
+    fd.append('severity', selectedSeverity.toLowerCase());
+    const lat = document.getElementById('f-lat').value;
+    const lng = document.getElementById('f-lng').value;
+    if(lat) fd.append('latitude', lat);
+    if(lng) fd.append('longitude', lng);
+    const photoFile = document.getElementById('f-photo').files[0];
+    if(photoFile) fd.append('photo', photoFile);
+
+    const toast = document.getElementById('toast');
+    try {
+      const result = await api('/api/complaints', { method:'POST', body: fd });
+      toast.classList.remove('hide');
+      toast.className = 'toast show';
+      toast.innerHTML = `Thanks — your report was filed as <b>${result.complaint_code}</b>. Track it under "My Reports".`;
+      pushNotification('camera', `Complaint ${result.complaint_code} was received and assigned`);
+      this.reset();
+      document.querySelectorAll('.sev-pills .pill').forEach(p=>p.classList.remove('on'));
+      document.querySelector('.sev-pills .pill.medium').classList.add('on');
+      selectedSeverity = 'Medium';
+    } catch(err) {
+      toast.classList.remove('hide');
+      toast.className = 'toast show';
+      toast.style.background = '#fee2e2'; toast.style.borderColor = '#fca5a5'; toast.style.color = '#b91c1c';
+      toast.innerHTML = `Couldn't submit: ${err.message}`;
+    } finally {
+      submitBtn.disabled = false;
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(()=>{
+        toast.classList.add('hide');
+        setTimeout(()=>{ toast.className = 'toast'; toast.style.background=''; toast.style.borderColor=''; toast.style.color=''; }, 160);
+      }, 4500);
+    }
+  });
+
+  renderNotifications();
+  initMap();
+</script>
+</body>
+</html>
