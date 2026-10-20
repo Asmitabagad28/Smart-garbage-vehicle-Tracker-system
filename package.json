@@ -1,14 +1,16 @@
 {
   "name": "cityclean",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "CityClean - smart garbage collection and complaint tracking",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.3",
     "multer": "^2.0.0",
     "mysql2": "^3.11.0"
   }

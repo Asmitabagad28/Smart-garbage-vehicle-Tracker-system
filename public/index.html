@@ -19,8 +19,68 @@
   };
 </script>
 <link rel="stylesheet" href="style.css">
+<style>
+  .auth-overlay{position:fixed;inset:0;z-index:1000;background:#eef6f0;display:none;align-items:center;justify-content:center;padding:20px;overflow:auto}
+  .auth-overlay.show{display:flex}
+  .auth-card{width:100%;max-width:380px;background:#fff;border:1px solid #d3e3d9;border-radius:14px;padding:28px;box-shadow:0 8px 30px rgba(10,26,15,.08);display:flex;flex-direction:column;gap:14px}
+  .auth-brand{font-family:'Fraunces',serif;font-size:26px;font-weight:600;color:#22543d}
+  .auth-sub{margin:-8px 0 2px;font-size:12.5px;color:#5b6b61}
+  .auth-card form{display:flex;flex-direction:column;gap:12px}
+  .auth-card .field{display:flex;flex-direction:column;gap:5px}
+  .auth-card .field label{font-size:12.5px;font-weight:600}
+  .auth-card input{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #c9dccf;border-radius:8px;font:inherit;font-size:14px}
+  .auth-error{min-height:16px;font-size:12.5px;color:#b91c1c}
+  .msg{font-size:12.5px;margin-top:6px;min-height:16px}
+  .msg.ok{color:#166534}
+  .msg.err{color:#b91c1c}
+  .table-wrap{overflow-x:auto}
+  .sub-card{border:1px solid #d3e3d9;border-radius:12px;padding:16px;margin:12px 0 22px}
+  .sub-card h3{margin:0 0 4px;font-size:14px}
+  .sub-card p{margin:0 0 10px;font-size:12.5px;opacity:.8}
+  .import-errors{margin:8px 0 0;padding-left:18px;font-size:12.5px;color:#b91c1c}
+  .user-box{display:none;margin-bottom:10px}
+  .user-box .u-name{font-weight:600;font-size:13px}
+  .user-box .u-role{font-size:11.5px;opacity:.75;margin-bottom:8px}
+</style>
 </head>
 <body>
+
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-card">
+    <div class="auth-brand">CityClean</div>
+    <p class="auth-sub">Log in to report issues and track your complaints.</p>
+    <div class="segmented" id="authTabs">
+      <button type="button" class="active" data-mode="login" onclick="setAuthMode('login')">Log in</button>
+      <button type="button" data-mode="register" onclick="setAuthMode('register')">Register</button>
+      <button type="button" data-mode="admin" onclick="setAuthMode('admin')">Admin sign-up</button>
+    </div>
+    <form id="authForm">
+      <div class="field" id="authNameField" style="display:none;">
+        <label for="a-name">Full name</label>
+        <input type="text" id="a-name" autocomplete="name" placeholder="e.g. Rohan Sharma">
+      </div>
+      <div class="field">
+        <label for="a-email">Email</label>
+        <input type="email" id="a-email" autocomplete="email" required>
+      </div>
+      <div class="field" id="authPhoneField" style="display:none;">
+        <label for="a-phone">Phone (optional)</label>
+        <input type="tel" id="a-phone" autocomplete="tel" maxlength="15">
+      </div>
+      <div class="field">
+        <label for="a-password">Password</label>
+        <input type="password" id="a-password" autocomplete="current-password" required minlength="8">
+      </div>
+      <div class="field" id="authCodeField" style="display:none;">
+        <label for="a-code">Admin registration code</label>
+        <input type="password" id="a-code" autocomplete="off">
+        <small style="font-size:11.5px; opacity:.75;">Given to you by the system owner. Admin passwords need at least 10 characters.</small>
+      </div>
+      <div class="auth-error" id="authError"></div>
+      <button type="submit" class="btn" id="authSubmit" style="width:100%;">Log in</button>
+    </form>
+  </div>
+</div>
 
 <div class="app">
   <aside class="sidebar">
@@ -48,6 +108,10 @@
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>
         Dashboard
       </button>
+      <button class="nav-item" data-tab="vehicles" onclick="showTab('vehicles')" style="display:none;">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h10v8H3z"/><path d="M13 11h4l3 3v1h-7z"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/></svg>
+        Vehicles
+      </button>
       <button class="nav-item" data-tab="notif" onclick="showTab('notif')">
         <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 0 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 13 6 9Z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg>
         Notifications
@@ -56,7 +120,14 @@
     <div class="sidebar-accent">
       <img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1200&h=80&fit=crop&auto=format" alt="" onerror="this.onerror=null;this.src=FALLBACK.nature;">
     </div>
-    <div class="sidebar-foot">CityClean · v1.0</div>
+    <div class="sidebar-foot">
+      <div class="user-box" id="userBox">
+        <div class="u-name" id="userName"></div>
+        <div class="u-role" id="userRole"></div>
+        <button type="button" class="btn btn-ghost" onclick="logout()">Log out</button>
+      </div>
+      CityClean · v1.1
+    </div>
   </aside>
 
   <main class="content">
@@ -84,8 +155,8 @@
       <p class="section-sub">Fill in the details below — your report gets a unique ID instantly.</p>
       <form class="form-grid" id="complaintForm">
         <div class="field">
-          <label>Your name</label>
-          <input type="text" id="f-name" placeholder="e.g. Rohan Sharma" required>
+          <label>Reporting as</label>
+          <input type="text" id="f-name" readonly>
         </div>
         <div class="field">
           <label>Locality</label>
@@ -163,9 +234,101 @@
       <div class="bars" id="barChart"></div>
       <h2 class="section-title" style="font-size:14.5px;">All complaints</h2>
       <table>
-        <thead><tr><th>ID</th><th>Citizen</th><th>Area</th><th>Severity</th><th>Status</th><th></th></tr></thead>
+        <thead><tr><th>ID</th><th>Citizen</th><th>Area</th><th>Severity</th><th>Status</th><th>Update</th></tr></thead>
         <tbody id="dashBody"></tbody>
       </table>
+    </section>
+
+    <!-- VEHICLES (admin only) -->
+    <section class="panel" id="panel-vehicles">
+      <h2 class="section-title">Vehicles</h2>
+      <p class="section-sub">Add collection vehicles and their drivers, import many from a CSV file, and keep positions up to date.</p>
+
+      <div class="sub-card">
+        <h3>Add a vehicle</h3>
+        <p>Only the vehicle number is required. A driver is needed for the vehicle to appear on the live map.</p>
+        <form class="form-grid" id="vehicleForm">
+          <div class="field"><label>Vehicle number</label><input type="text" id="v-number" placeholder="e.g. MH01AB1234" maxlength="20" required></div>
+          <div class="field"><label>Vehicle type</label>
+            <input type="text" id="v-type" list="vehicleTypes" placeholder="e.g. Compactor Truck" maxlength="50">
+            <datalist id="vehicleTypes"><option>Compactor Truck</option><option>Tipper</option><option>Mini Truck</option><option>Tractor Trolley</option></datalist>
+          </div>
+          <div class="field"><label>Capacity (tonnes)</label><input type="number" id="v-capacity" min="0" step="0.01" placeholder="e.g. 5"></div>
+          <div class="field"><label>Status</label>
+            <select id="v-status"><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
+          </div>
+          <div class="field full"><label>Area covered</label>
+            <select id="v-area"><option value="">No area yet</option></select>
+          </div>
+          <div class="field"><label>Driver name</label><input type="text" id="v-driver-name" maxlength="100"></div>
+          <div class="field"><label>Driver phone</label><input type="text" id="v-driver-phone" maxlength="15"></div>
+          <div class="field full"><label>Driver license number</label><input type="text" id="v-license" maxlength="30"></div>
+          <div class="field"><label>Starting latitude (optional)</label><input type="text" id="v-lat" placeholder="Defaults to the area centre"></div>
+          <div class="field"><label>Starting longitude (optional)</label><input type="text" id="v-lng"></div>
+          <div class="field full">
+            <button type="button" class="btn btn-ghost" style="width:fit-content;" onclick="detectInto('v-lat','v-lng','vehicleMsg')">Detect my location</button>
+            <small style="font-size:11.5px; opacity:.75;">Open this page on the vehicle's phone and tap this to fill in where the vehicle is right now.</small>
+          </div>
+          <div class="field full"><label>ETA to the area, in minutes (optional)</label><input type="number" id="v-eta" min="0" max="1440" step="1"></div>
+          <div class="field full">
+            <button type="submit" class="btn" id="vehicleSubmit" style="width:fit-content;">Add vehicle</button>
+            <div class="msg" id="vehicleMsg"></div>
+          </div>
+        </form>
+      </div>
+
+      <div class="sub-card">
+        <h3>Import vehicles from a CSV file</h3>
+        <p>The first row must be the column names. Only <b>vehicle_number</b> is required. Up to 200 vehicles at a time; rows that fail are skipped and listed below.</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <input type="file" id="csvFile" accept=".csv,text/csv">
+          <button type="button" class="btn" id="csvImportBtn" onclick="importCsv()">Import</button>
+          <button type="button" class="btn btn-ghost" onclick="downloadSampleCsv()">Download sample CSV</button>
+        </div>
+        <div class="msg" id="csvMsg"></div>
+        <ul class="import-errors" id="csvErrors"></ul>
+      </div>
+
+      <div class="sub-card">
+        <h3>Vehicle locator</h3>
+        <p>Every vehicle with a recorded position. Green is active, grey is inactive. Click a point on the map to fill in a position form below.</p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:10px;">
+          <label style="font-size:12.5px;">Map click fills:</label>
+          <select id="pickTarget" class="mini-btn">
+            <option value="position">the "Update position" form</option>
+            <option value="add">the "Add a vehicle" form</option>
+          </select>
+          <button type="button" class="btn btn-ghost" onclick="renderVehiclesAdmin()">Refresh</button>
+        </div>
+        <div id="adminMap" style="height:340px; border-radius:10px; border:1px solid #d3e3d9; overflow:hidden;"></div>
+      </div>
+
+      <h2 class="section-title" style="font-size:14.5px;">All vehicles</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Number</th><th>Type</th><th>Capacity</th><th>Area</th><th>Driver</th><th>Position / ETA</th><th>Status</th><th></th></tr></thead>
+          <tbody id="vehicleBody"></tbody>
+        </table>
+      </div>
+
+      <div class="sub-card" style="margin-top:22px;">
+        <h3>Update a vehicle's position</h3>
+        <p>Records a new location and ETA. The live map and the citizens' ETA list use the latest one.</p>
+        <form class="form-grid" id="positionForm">
+          <div class="field full"><label>Vehicle</label><select id="p-vehicle" required></select></div>
+          <div class="field"><label>Latitude</label><input type="text" id="p-lat" required></div>
+          <div class="field"><label>Longitude</label><input type="text" id="p-lng" required></div>
+          <div class="field full">
+            <button type="button" class="btn btn-ghost" style="width:fit-content;" onclick="detectInto('p-lat','p-lng','positionMsg')">Detect my location</button>
+            <small style="font-size:11.5px; opacity:.75;">Or click a point on the locator map above.</small>
+          </div>
+          <div class="field full"><label>ETA in minutes (optional)</label><input type="number" id="p-eta" min="0" max="1440" step="1"></div>
+          <div class="field full">
+            <button type="submit" class="btn" style="width:fit-content;">Save position</button>
+            <div class="msg" id="positionMsg"></div>
+          </div>
+        </form>
+      </div>
     </section>
 
     <!-- NOTIFICATIONS -->
@@ -181,6 +344,13 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
+  // Turns text from the server into safe text before it is placed in the page
+  function esc(value){
+    return String(value === null || value === undefined ? '' : value)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
   const ICON = {
     truck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h10v8H3z"/><path d="M13 11h4l3 3v1h-7z"/><circle cx="7" cy="17.5" r="1.6"/><circle cx="17" cy="17.5" r="1.6"/></svg>',
     check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.3l2.4 2.4 4.6-5"/></svg>',
@@ -195,12 +365,25 @@
   let notifications = [];
   const EMPTY_IMG = 'https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?w=300&h=200&fit=crop&auto=format';
 
-  async function api(path, opts){
-    const res = await fetch(API + path, opts);
+  let authToken = null;
+  try { authToken = localStorage.getItem('cc_token'); } catch(e) { /* storage blocked */ }
+  let currentUser = null;
+  const isAdmin = () => currentUser && currentUser.role === 'Admin';
+
+  async function api(path, opts = {}){
+    const headers = Object.assign({}, opts.headers || {});
+    if(authToken) headers['Authorization'] = 'Bearer ' + authToken;
+    const res = await fetch(API + path, Object.assign({}, opts, {headers}));
     let data = null;
     try { data = await res.json(); } catch(e) { /* no body */ }
+    if(res.status === 401 && authToken){ logout(); throw new Error('Please log in again'); }
     if(!res.ok) throw new Error((data && data.message) || `Request failed (${res.status})`);
     return data;
+  }
+
+  function logout(){
+    try { localStorage.removeItem('cc_token'); } catch(e) {}
+    location.reload();
   }
 
   function timeAgo(iso){
@@ -213,8 +396,11 @@
     return `${Math.round(hrs/24)} day(s) ago`;
   }
 
-  function pushNotification(ic, title){
-    notifications.unshift({ic, title, time:'Just now'});
+  async function loadNotifications(){
+    try {
+      const rows = await api('/api/notifications');
+      notifications = rows.map(n => ({ic: n.ic, title: n.title, time: timeAgo(n.created_at)}));
+    } catch(e) { notifications = []; }
     renderNotifications();
   }
 
@@ -233,10 +419,18 @@
       return;
     }
     const map = L.map(el, {scrollWheelZoom:false}).setView([19.0176, 72.8562], 14);
+    window._ccMap = map;
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19
     }).addTo(map);
+    window._ccMarkers = L.layerGroup().addTo(map);
+    drawMarkers();
+  }
+
+  function drawMarkers(){
+    if(!window._ccMarkers) return;
+    window._ccMarkers.clearLayers();
     vehiclesCache.forEach(v=>{
       if(v.latitude == null || v.longitude == null) return;
       const color = etaClass(v.eta_minutes) === 'soon' ? '#40916c' : etaClass(v.eta_minutes) === 'mid' ? '#f59e0b' : '#0ea5e9';
@@ -245,9 +439,20 @@
         html:`<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 1px 4px rgba(10,26,15,.45);"></div>`,
         iconSize:[16,16], iconAnchor:[8,8]
       });
-      L.marker([Number(v.latitude), Number(v.longitude)], {icon}).addTo(map)
-        .bindTooltip(`<b>${v.vehicle_number}</b><br>${v.area} · ${v.eta_minutes} min`, {direction:'top', offset:[0,-8]});
+      L.marker([Number(v.latitude), Number(v.longitude)], {icon}).addTo(window._ccMarkers)
+        .bindTooltip(`<b>${esc(v.vehicle_number)}</b><br>${esc(v.area)} · ${etaText(v.eta_minutes)}`, {direction:'top', offset:[0,-8]});
     });
+  }
+
+  function etaText(mins){ return mins == null ? 'ETA not set' : `${Number(mins)} min`; }
+
+  // Re-reads vehicles from the server and redraws the map and the ETA list
+  async function refreshVehicles(){
+    try {
+      vehiclesCache = await api('/api/vehicles');
+      renderRoutes();
+      drawMarkers();
+    } catch(e) { /* keep the old data on screen */ }
   }
 
   function etaClass(mins){
@@ -260,12 +465,14 @@
   function renderRoutes(){
     document.getElementById('routeList').innerHTML = vehiclesCache.map(v=>`
       <div class="route-item">
-        <div><div class="rname">${v.vehicle_number}</div><div class="rarea">${v.area}</div></div>
-        <div class="eta ${etaClass(v.eta_minutes)}">${v.eta_minutes} min</div>
+        <div><div class="rname">${esc(v.vehicle_number)}</div><div class="rarea">${esc(v.area)}</div></div>
+        <div class="eta ${etaClass(v.eta_minutes)}">${etaText(v.eta_minutes)}</div>
       </div>`).join('');
   }
 
   function showTab(name){
+    if((name === 'dashboard' || name === 'vehicles') && !isAdmin()) return;
+    if((name === 'report' || name === 'reports') && isAdmin()) return;
     document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active', b.dataset.tab===name));
     document.querySelectorAll('.panel').forEach(p=>{
       const isTarget = p.id === 'panel-'+name;
@@ -274,6 +481,9 @@
     });
     if(name === 'reports') renderReports();
     if(name === 'dashboard') renderDashboard();
+    if(name === 'vehicles') renderVehiclesAdmin();
+    if(name === 'notif') loadNotifications();
+    if(name === 'map' && window._ccMap) setTimeout(() => window._ccMap.invalidateSize(), 60);
   }
 
   function pickSeverity(el, val){
@@ -335,8 +545,8 @@
       box.innerHTML = list.map(c=>`
         <div class="report-card">
           <div>
-            <div class="rc-id">${c.complaint_code}</div>
-            <div class="rc-area">${c.area} · ${sevDot(c.severity)}</div>
+            <div class="rc-id">${esc(c.complaint_code)}</div>
+            <div class="rc-area">${esc(c.area)} · ${sevDot(c.severity)}</div>
           </div>
           <div style="display:flex; align-items:center; gap:14px;">
             ${statusBadge(c.status)}
@@ -350,7 +560,7 @@
   async function renderDashboard(){
     let summary, list;
     try {
-      [summary, list] = await Promise.all([api('/api/dashboard/summary'), api('/api/complaints')]);
+      [summary, list] = await Promise.all([api('/api/admin/summary'), api('/api/admin/complaints')]);
     } catch(e) {
       document.getElementById('statGrid').innerHTML = `<div class="stat">Couldn't load dashboard — ${e.message}</div>`;
       return;
@@ -360,20 +570,20 @@
       <div class="stat"><div class="num">${summary.total_complaints}</div><div class="lbl">Total complaints</div></div>
       <div class="stat"><div class="num">${summary.resolved}</div><div class="lbl">Resolved</div></div>
       <div class="stat"><div class="num">${summary.pending + summary.in_progress}</div><div class="lbl">Open / in progress</div></div>
-      <div class="stat"><div class="num">${topArea ? topArea.area : '—'}</div><div class="lbl">Most-affected area</div></div>`;
+      <div class="stat"><div class="num">${topArea ? esc(topArea.area) : '—'}</div><div class="lbl">Most-affected area</div></div>`;
 
     const max = Math.max(...summary.complaints_by_area.map(a=>a.count), 1);
     document.getElementById('barChart').innerHTML = summary.complaints_by_area.map(a=>`
       <div class="bar-row">
-        <div>${a.area}</div>
+        <div>${esc(a.area)}</div>
         <div class="bar-track"><div class="bar-fill" style="width:${(a.count/max*100)}%"></div></div>
         <div>${a.count}</div>
       </div>`).join('');
 
     document.getElementById('dashBody').innerHTML = list.map(c=>`
-      <tr><td class="rc-id">${c.complaint_code}</td><td>${c.citizen_name}</td><td>${c.area}</td><td>${sevDot(c.severity)}</td>
+      <tr><td class="rc-id">${esc(c.complaint_code)}</td><td>${esc(c.citizen_name)}</td><td>${esc(c.area)}</td><td>${sevDot(c.severity)}</td>
       <td>${statusBadge(c.status)}</td>
-      <td>${c.status!=='resolved' ? `<button class="mini-btn" onclick="resolveComplaint(${c.id}, '${c.complaint_code}')">Mark resolved</button>` : '—'}</td></tr>`).join('');
+      <td><select class="mini-btn" onchange="setStatus(${c.id}, this.value)">${Object.keys(STATUS_META).map(k => `<option value="${k}" ${k===c.status?'selected':''}>${STATUS_META[k].label}</option>`).join('')}</select></td></tr>`).join('');
   }
 
   function renderNotifications(){
@@ -381,23 +591,22 @@
       ? notifications.map(n=>`
         <div class="notif">
           <div class="nic">${ICON[n.ic]}</div>
-          <div><div class="ntitle">${n.title}</div><div class="ntime">${n.time}</div></div>
+          <div><div class="ntitle">${esc(n.title)}</div><div class="ntime">${n.time}</div></div>
         </div>`).join('')
       : `<div class="empty-state"><p>No notifications yet.</p></div>`;
   }
 
-  async function resolveComplaint(id, code){
+  async function setStatus(id, status){
     try {
-      await api(`/api/complaints/${id}`, {
+      await api(`/api/admin/complaints/${id}`, {
         method:'PATCH',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({status:'resolved'})
+        body: JSON.stringify({status})
       });
-      pushNotification('check', `Complaint ${code} has been resolved`);
-      renderDashboard(); renderReports();
     } catch(e) {
-      alert('Could not mark resolved: ' + e.message);
+      alert('Could not update the status: ' + e.message);
     }
+    renderDashboard();
   }
 
   document.getElementById('complaintForm').addEventListener('submit', async function(e){
@@ -406,7 +615,6 @@
     submitBtn.disabled = true;
 
     const fd = new FormData();
-    fd.append('citizen_name', document.getElementById('f-name').value || 'Anonymous');
     fd.append('area', document.getElementById('f-area').value);
     fd.append('description', document.getElementById('f-desc').value);
     fd.append('severity', selectedSeverity.toLowerCase());
@@ -423,8 +631,9 @@
       toast.classList.remove('hide');
       toast.className = 'toast show';
       toast.innerHTML = `Thanks — your report was filed as <b>${result.complaint_code}</b>. Track it under "My Reports".`;
-      pushNotification('camera', `Complaint ${result.complaint_code} was received and assigned`);
+      loadNotifications();
       this.reset();
+      document.getElementById('f-name').value = currentUser.name;
       document.querySelectorAll('.sev-pills .pill').forEach(p=>p.classList.remove('on'));
       document.querySelector('.sev-pills .pill.medium').classList.add('on');
       selectedSeverity = 'Medium';
@@ -443,8 +652,391 @@
     }
   });
 
+  // ---------- admin: vehicles ----------
+  let locationsLoaded = false;
+
+  // ----- admin locator map -----
+  let adminVehicles = [], adminMap = null, adminMarkers = null, adminMarkersById = {}, pickMarker = null, adminFitted = false;
+
+  function initAdminMap(){
+    const el = document.getElementById('adminMap');
+    if(adminMap){ setTimeout(() => adminMap.invalidateSize(), 100); return; }
+    if(typeof L === 'undefined'){
+      el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;font-size:12.5px;padding:24px;text-align:center;">Map tiles need an internet connection to load.</div>';
+      return;
+    }
+    adminMap = L.map(el, {scrollWheelZoom:false}).setView([19.0176, 72.8562], 14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19
+    }).addTo(adminMap);
+    adminMarkers = L.layerGroup().addTo(adminMap);
+    adminMap.on('click', e => {
+      const lat = e.latlng.lat.toFixed(6), lng = e.latlng.lng.toFixed(6);
+      const add = document.getElementById('pickTarget').value === 'add';
+      document.getElementById(add ? 'v-lat' : 'p-lat').value = lat;
+      document.getElementById(add ? 'v-lng' : 'p-lng').value = lng;
+      setPicker(Number(lat), Number(lng));
+    });
+    setTimeout(() => adminMap.invalidateSize(), 100);
+  }
+
+  function setPicker(lat, lng){
+    if(!adminMap) return;
+    if(pickMarker) adminMap.removeLayer(pickMarker);
+    pickMarker = L.circleMarker([lat, lng], {radius:8, color:'#b45309', fillColor:'#f59e0b', fillOpacity:.85})
+      .addTo(adminMap).bindTooltip('Selected point', {direction:'top'});
+  }
+
+  function drawAdminMarkers(){
+    if(!adminMarkers) return;
+    adminMarkers.clearLayers();
+    adminMarkersById = {};
+    const points = [];
+    adminVehicles.forEach(v => {
+      if(v.latitude == null || v.longitude == null) return;
+      const color = v.status === 'Active' ? '#40916c' : '#94a3b8';
+      const icon = L.divIcon({
+        className:'',
+        html:`<div style="width:16px;height:16px;border-radius:50%;background:${color};border:2.5px solid #fff;box-shadow:0 1px 4px rgba(10,26,15,.45);"></div>`,
+        iconSize:[16,16], iconAnchor:[8,8]
+      });
+      const tip = `<b>${esc(v.vehicle_number)}</b><br>${esc(v.area || 'No area')} · ${etaText(v.eta_minutes)}`
+        + (v.driver_name ? `<br>Driver: ${esc(v.driver_name)}` : '')
+        + (v.status !== 'Active' ? '<br>Inactive' : '');
+      adminMarkersById[v.id] = L.marker([Number(v.latitude), Number(v.longitude)], {icon})
+        .addTo(adminMarkers).bindTooltip(tip, {direction:'top', offset:[0,-8]});
+      points.push([Number(v.latitude), Number(v.longitude)]);
+    });
+    if(points.length && !adminFitted){
+      adminMap.fitBounds(points, {padding:[30,30], maxZoom:16});
+      adminFitted = true;
+    }
+  }
+
+  function locateVehicle(id){
+    const v = adminVehicles.find(x => x.id === id);
+    if(!v) return;
+    if(v.latitude == null || !adminMap){
+      alert(`${v.vehicle_number} has no recorded position yet. Use "Update a vehicle's position" to add one.`);
+      return;
+    }
+    document.getElementById('adminMap').scrollIntoView({behavior:'smooth', block:'center'});
+    adminMap.setView([Number(v.latitude), Number(v.longitude)], 16);
+    if(adminMarkersById[id]) adminMarkersById[id].openTooltip();
+  }
+
+  // ----- detect a position with the device's GPS -----
+  function detectInto(latId, lngId, msgId){
+    if(!navigator.geolocation){ showMsg(msgId, 'This browser cannot detect location.', false); return; }
+    showMsg(msgId, 'Detecting location…', true);
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = pos.coords.latitude, lng = pos.coords.longitude;
+      document.getElementById(latId).value = lat.toFixed(6);
+      document.getElementById(lngId).value = lng.toFixed(6);
+      showMsg(msgId, `Location detected (accurate to about ${Math.round(pos.coords.accuracy)} m).`, true);
+      if(adminMap){ setPicker(lat, lng); adminMap.setView([lat, lng], 16); }
+    }, err => {
+      const reasons = {
+        1: 'Location permission was blocked. Allow location for this site and try again.',
+        2: 'This device could not work out its location.',
+        3: 'Detecting the location timed out. Try again.'
+      };
+      showMsg(msgId, reasons[err.code] || 'Could not detect the location.', false);
+    }, {enableHighAccuracy:true, timeout:10000});
+  }
+
+  function showMsg(id, message, ok){
+    const el = document.getElementById(id);
+    el.textContent = message;
+    el.className = 'msg ' + (ok ? 'ok' : 'err');
+  }
+
+  async function renderVehiclesAdmin(){
+    try {
+      if(!locationsLoaded){
+        const locs = await api('/api/admin/locations');
+        document.getElementById('v-area').innerHTML =
+          '<option value="">No area yet</option>' + locs.map(l => `<option value="${l.id}">${esc(l.area)}</option>`).join('');
+        locationsLoaded = true;
+      }
+      const list = await api('/api/admin/vehicles');
+      adminVehicles = list;
+      initAdminMap();
+      drawAdminMarkers();
+      document.getElementById('vehicleBody').innerHTML = list.length ? list.map(v => {
+        const pos = v.latitude != null
+          ? `${Number(v.latitude).toFixed(4)}, ${Number(v.longitude).toFixed(4)}<br><small>${etaText(v.eta_minutes)}</small>`
+          : 'Not tracked';
+        const driver = v.driver_name
+          ? `${esc(v.driver_name)}${v.license_number ? `<br><small>${esc(v.license_number)}</small>` : ''}`
+          : '—';
+        return `<tr>
+          <td class="rc-id">${esc(v.vehicle_number)}</td>
+          <td>${esc(v.vehicle_type || '—')}</td>
+          <td>${v.capacity != null ? esc(Number(v.capacity)) + ' t' : '—'}</td>
+          <td>${esc(v.area || '—')}</td>
+          <td>${driver}</td>
+          <td>${pos}</td>
+          <td><select class="mini-btn" onchange="setVehicleStatus(${Number(v.id)}, this.value)">
+            <option value="Active" ${v.status==='Active'?'selected':''}>Active</option>
+            <option value="Inactive" ${v.status==='Inactive'?'selected':''}>Inactive</option>
+          </select></td>
+          <td style="white-space:nowrap;">
+            <button class="mini-btn" onclick="locateVehicle(${Number(v.id)})">Locate</button>
+            <button class="mini-btn" onclick="removeVehicle(${Number(v.id)})">Remove</button>
+          </td>
+        </tr>`;
+      }).join('') : '<tr><td colspan="8">No vehicles yet. Add one above.</td></tr>';
+
+      document.getElementById('p-vehicle').innerHTML = list.filter(v => v.driver_name).map(v =>
+        `<option value="${Number(v.id)}">${esc(v.vehicle_number)}${v.area ? ' · ' + esc(v.area) : ''}</option>`).join('')
+        || '<option value="">No vehicle with a driver yet</option>';
+    } catch(e) {
+      document.getElementById('vehicleBody').innerHTML = `<tr><td colspan="8">Couldn't load vehicles: ${esc(e.message)}</td></tr>`;
+    }
+  }
+
+  document.getElementById('vehicleForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    const btn = document.getElementById('vehicleSubmit');
+    btn.disabled = true;
+    showMsg('vehicleMsg', '', true);
+    try {
+      await api('/api/admin/vehicles', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          vehicle_number: document.getElementById('v-number').value,
+          vehicle_type: document.getElementById('v-type').value,
+          capacity: document.getElementById('v-capacity').value,
+          status: document.getElementById('v-status').value,
+          location_id: document.getElementById('v-area').value,
+          driver_name: document.getElementById('v-driver-name').value,
+          driver_phone: document.getElementById('v-driver-phone').value,
+          license_number: document.getElementById('v-license').value,
+          latitude: document.getElementById('v-lat').value,
+          longitude: document.getElementById('v-lng').value,
+          eta_minutes: document.getElementById('v-eta').value
+        })
+      });
+      showMsg('vehicleMsg', 'Vehicle added.', true);
+      this.reset();
+      renderVehiclesAdmin();
+      refreshVehicles();
+    } catch(err) {
+      showMsg('vehicleMsg', err.message, false);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('positionForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    const id = document.getElementById('p-vehicle').value;
+    if(!id){ showMsg('positionMsg', 'Add a vehicle with a driver first.', false); return; }
+    try {
+      await api(`/api/admin/vehicles/${id}`, {
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          latitude: document.getElementById('p-lat').value,
+          longitude: document.getElementById('p-lng').value,
+          eta_minutes: document.getElementById('p-eta').value
+        })
+      });
+      showMsg('positionMsg', 'Position saved.', true);
+      this.reset();
+      renderVehiclesAdmin();
+      refreshVehicles();
+    } catch(err) {
+      showMsg('positionMsg', err.message, false);
+    }
+  });
+
+  async function setVehicleStatus(id, status){
+    try {
+      await api(`/api/admin/vehicles/${id}`, {
+        method:'PATCH',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({status})
+      });
+      refreshVehicles();
+    } catch(err) {
+      alert('Could not change the status: ' + err.message);
+    }
+    renderVehiclesAdmin();
+  }
+
+  async function removeVehicle(id){
+    if(!confirm('Remove this vehicle together with its driver and route? This cannot be undone.')) return;
+    try {
+      await api(`/api/admin/vehicles/${id}`, {method:'DELETE'});
+      refreshVehicles();
+    } catch(err) {
+      alert('Could not remove the vehicle: ' + err.message);
+    }
+    renderVehiclesAdmin();
+  }
+
+  // Small CSV reader: handles quoted fields, commas inside quotes, and Windows line endings
+  function parseCsv(textData){
+    const rows = [];
+    let row = [], cur = '', quoted = false;
+    textData = textData.replace(/^\uFEFF/, '');
+    for(let i = 0; i < textData.length; i++){
+      const ch = textData[i];
+      if(quoted){
+        if(ch === '"'){
+          if(textData[i+1] === '"'){ cur += '"'; i++; } else { quoted = false; }
+        } else { cur += ch; }
+      } else if(ch === '"'){ quoted = true; }
+      else if(ch === ','){ row.push(cur); cur = ''; }
+      else if(ch === '\n' || ch === '\r'){
+        if(ch === '\r' && textData[i+1] === '\n') i++;
+        row.push(cur); cur = ''; rows.push(row); row = [];
+      } else { cur += ch; }
+    }
+    if(cur !== '' || row.length){ row.push(cur); rows.push(row); }
+    return rows.filter(r => r.some(c => c.trim() !== ''));
+  }
+
+  const CSV_COLUMNS = ['vehicle_number','vehicle_type','capacity','status','area','driver_name','driver_phone','license_number','latitude','longitude','eta_minutes'];
+
+  function downloadSampleCsv(){
+    const lines = [
+      CSV_COLUMNS.join(','),
+      'MH01XY1001,Compactor Truck,5,Active,Kidwai Nagar,Ramesh Pawar,9876500001,MH0120250002001,19.0262,72.8581,12',
+      'MH01XY1002,Tipper,3.5,Active,Antop Hill,Sunil Gaikwad,9876500002,MH0120250002002,,,20'
+    ];
+    const blob = new Blob([lines.join('\r\n') + '\r\n'], {type:'text/csv'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'vehicles-sample.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(a.href);
+  }
+
+  async function importCsv(){
+    const input = document.getElementById('csvFile');
+    const btn = document.getElementById('csvImportBtn');
+    const errList = document.getElementById('csvErrors');
+    errList.innerHTML = '';
+    if(!input.files[0]){ showMsg('csvMsg', 'Choose a CSV file first.', false); return; }
+    btn.disabled = true;
+    try {
+      const rows = parseCsv(await input.files[0].text());
+      if(rows.length < 2) throw new Error('The file needs a header row and at least one vehicle row.');
+      const header = rows[0].map(h => h.trim().toLowerCase().replace(/\s+/g, '_'));
+      if(!header.includes('vehicle_number')) throw new Error('The header row must include a vehicle_number column.');
+      const data = rows.slice(1).map(r => {
+        const obj = {};
+        header.forEach((h, i) => { if(CSV_COLUMNS.includes(h)) obj[h] = (r[i] || '').trim(); });
+        return obj;
+      });
+      const result = await api('/api/admin/vehicles/bulk', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({rows: data})
+      });
+      const failed = result.errors.length;
+      showMsg('csvMsg', `${result.created} vehicle(s) imported${failed ? `, ${failed} row(s) skipped:` : '.'}`, failed === 0);
+      errList.innerHTML = result.errors.map(x => `<li>Row ${x.row}: ${esc(x.message)}</li>`).join('');
+      if(result.created > 0){ input.value = ''; renderVehiclesAdmin(); refreshVehicles(); }
+    } catch(err) {
+      showMsg('csvMsg', err.message, false);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ---------- login / register ----------
+  let authMode = 'login';
+  function setAuthMode(mode){
+    authMode = mode;
+    const reg = mode !== 'login';
+    const adm = mode === 'admin';
+    document.querySelectorAll('#authTabs button').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    document.getElementById('authNameField').style.display = reg ? '' : 'none';
+    document.getElementById('authPhoneField').style.display = reg ? '' : 'none';
+    document.getElementById('a-name').required = reg;
+    document.getElementById('authCodeField').style.display = adm ? '' : 'none';
+    document.getElementById('a-code').required = adm;
+    document.getElementById('a-password').minLength = adm ? 10 : 8;
+    document.getElementById('a-password').autocomplete = reg ? 'new-password' : 'current-password';
+    document.getElementById('authSubmit').textContent = adm ? 'Create admin account' : (reg ? 'Create account' : 'Log in');
+    document.getElementById('authError').textContent = '';
+  }
+
+  document.getElementById('authForm').addEventListener('submit', async function(e){
+    e.preventDefault();
+    const errBox = document.getElementById('authError');
+    const btn = document.getElementById('authSubmit');
+    errBox.textContent = '';
+    btn.disabled = true;
+
+    const body = {
+      email: document.getElementById('a-email').value,
+      password: document.getElementById('a-password').value
+    };
+    if(authMode !== 'login'){
+      body.name = document.getElementById('a-name').value;
+      body.phone = document.getElementById('a-phone').value;
+    }
+    if(authMode === 'admin') body.admin_code = document.getElementById('a-code').value;
+    try {
+      const endpoint = authMode === 'admin' ? '/api/register-admin' : (authMode === 'register' ? '/api/register' : '/api/login');
+      const res = await fetch(API + endpoint, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      let data = null;
+      try { data = await res.json(); } catch(x) {}
+      if(!res.ok) throw new Error((data && data.message) || `Request failed (${res.status})`);
+      authToken = data.token;
+      currentUser = data.user;
+      try { localStorage.setItem('cc_token', authToken); } catch(x) {}
+      this.reset();
+      setAuthMode('login');
+      enterApp();
+    } catch(ex) {
+      errBox.textContent = ex.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  function enterApp(){
+    document.getElementById('authOverlay').classList.remove('show');
+    const admin = isAdmin();
+    document.getElementById('userName').textContent = currentUser.name;
+    document.getElementById('userRole').textContent = admin ? 'Administrator' : 'Citizen';
+    document.getElementById('userBox').style.display = 'block';
+    const show = (tab, on) => { document.querySelector(`.nav-item[data-tab="${tab}"]`).style.display = on ? '' : 'none'; };
+    show('dashboard', admin);
+    show('vehicles', admin);
+    show('report', !admin);
+    show('reports', !admin);
+    document.getElementById('f-name').value = currentUser.name;
+    initMap();
+    loadNotifications();
+    showTab(admin ? 'dashboard' : 'map');
+  }
+
+  async function bootstrap(){
+    if(authToken){
+      try {
+        currentUser = (await api('/api/me')).user;
+        enterApp();
+        return;
+      } catch(e) { /* token invalid or server down: fall through to the login screen */ }
+    }
+    document.getElementById('authOverlay').classList.add('show');
+  }
+
   renderNotifications();
-  initMap();
+  bootstrap();
 </script>
 </body>
 </html>
